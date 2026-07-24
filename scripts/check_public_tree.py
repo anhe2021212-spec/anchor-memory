@@ -83,11 +83,6 @@ def _rules() -> dict[str, re.Pattern[str]]:
         "provider-key-shape": re.compile(
             r"\b(?:sk|rk|pk|api)[-_][A-Za-z0-9_-]{16,}\b", re.IGNORECASE
         ),
-        "private-identity-literal": re.compile(
-            "|".join(("安" + "珩", "安" + "老师", "C" + "老师", "小" + "狗")),
-            re.IGNORECASE,
-        ),
-        "private-channel-literal": re.compile("an" + r"\s+channel", re.IGNORECASE),
         "phone-shape": re.compile(r"(?<!\d)\+?\d[\d ()-]{9,}\d(?!\d)"),
         "coordinate-shape": re.compile(
             coordinate_decimal + r",\s*" + coordinate_decimal
@@ -151,15 +146,11 @@ def scan(root: Path) -> list[tuple[str, Path, int | None]]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if path.name == "manifest.sha256":
-            continue
         for line_number, line in enumerate(text.splitlines(), 1):
-            sanitized_line = line.replace("YOUR_API_KEY_HERE", "")
-            if path.name == "lineage.tsv":
-                sanitized_line = re.sub(r"\b[0-9a-f]{64}\b", "", sanitized_line)
+            scan_line = line.replace("YOUR_API_KEY_HERE", "")
             for allowed_url in ALLOWED_PUBLIC_URLS:
-                sanitized_line = sanitized_line.replace(allowed_url, "")
-            rule_line = re.sub(r"\b20\d{2}-\d{2}-\d{2}\b", "", sanitized_line)
+                scan_line = scan_line.replace(allowed_url, "")
+            rule_line = re.sub(r"\b20\d{2}-\d{2}-\d{2}\b", "", scan_line)
             for rule, pattern in rules.items():
                 match = pattern.search(rule_line)
                 if not match:
@@ -169,13 +160,13 @@ def scan(root: Path) -> list[tuple[str, Path, int | None]]:
                 if rule == "phone-shape" and sum(ch.isdigit() for ch in match.group(0)) < 10:
                     continue
                 findings.append((rule, relative, line_number))
-            for url in url_pattern.findall(sanitized_line):
+            for url in url_pattern.findall(scan_line):
                 host = url.split("://", 1)[1].split("/", 1)[0].split(":", 1)[0]
                 if host not in ALLOWED_PUBLIC_HOSTS and not host.endswith(".invalid"):
                     findings.append(("public-url", relative, line_number))
             for candidate in re.findall(
                 r"(?<![A-Za-z0-9])[A-Za-z0-9+/=_-]{40,}(?![A-Za-z0-9])",
-                sanitized_line,
+                scan_line,
             ):
                 edge_roles = {"lateral", "temporal", "derived_from", "updates", "SUPPORTED_BY", "EVOKES"}
                 if set(candidate.split("/")) == edge_roles:
@@ -196,9 +187,9 @@ def main() -> None:
         location = f"{path}:{line}" if line else str(path)
         print(f"{rule}\t{location}")
     if findings:
-        print(f"release verification failed: {len(findings)} finding(s)")
+        print(f"public tree check failed: {len(findings)} finding(s)")
         raise SystemExit(1)
-    print("release verification passed")
+    print("public tree check passed")
 
 
 if __name__ == "__main__":

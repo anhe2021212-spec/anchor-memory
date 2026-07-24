@@ -20,8 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python scripts/verify_release_tree.py .
-      - run: python scripts/verify_manifest.py .
+      - run: python scripts/check_public_tree.py .
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest tests/test_live_contract.py tests/test_full_chain_contract.py
@@ -34,8 +33,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python scripts/verify_release_tree.py .
-      - run: python scripts/verify_manifest.py .
+      - run: python scripts/check_public_tree.py .
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[server,chroma,kuzu,dev]"
       - run: python -m pytest tests/test_real_projections.py

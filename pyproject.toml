@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anchor-memory"
 version = "0.2.0.dev0"
-description = "A traceable sanitized extraction of the live Anchor Memory implementation."
+description = "A local-first graph memory and cognition pipeline for AI agents."
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Anchor Memory contributors" }]

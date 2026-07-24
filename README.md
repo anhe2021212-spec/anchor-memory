@@ -1,189 +1,132 @@
 # Anchor Memory
 
-A local-first memory system for AI agents. SQLite is the single source of truth
-— every node, edge, belief, activation score, and maintenance event lives in one
-portable file. Optional vector stores and graph projections improve retrieval
-but never gate a write.
+Anchor Memory is a local-first memory system for long-running AI agents. SQLite is the authoritative store; optional vector and graph backends improve retrieval without gating writes.
 
-This is not a RAG wrapper. Anchor Memory is a full cognition chain: from the
-moment a message arrives, through reflex routing, multi-signal recall, belief
-reasoning, and overnight maintenance — the complete loop that turns
-conversations into durable, retrievable, evolving memory.
+It covers the full memory loop: ingestion, automatic taxonomy, recall, association, agent review, beliefs, briefing, counterexample review, chat-history evidence, and maintenance.
 
-## Who authors and reviews the memory
+## Features
 
-The **memory-owning AI agent** is the subject, semantic author, and intended
-reviewer of this system. The human operator supplies infrastructure; they are
-not the curator of the agent's memories.
+- **SQLite authority and CJK FTS5** — memories, edges, activation, events, and full-text search remain portable.
+- **Multi-signal recall** — FTS, optional Chroma vectors, reciprocal-rank fusion, reranking, bounded flow diffusion, and temporal resolution.
+- **Two graph planes** — conductive `flow_edges` are separate from non-conductive semantic relations.
+- **Agent-owned review** — mechanical jobs may prepare proposals; the memory-owning AI agent approves semantic changes and authors higher-level understanding.
+- **Belief engine** — confidence from weighted support, contradiction, and boundary cases, with promotion, demotion, briefing, and dream review.
+- **Theseus / Wenku** — chunk validation, policy checks, staleness detection, repair, hydration, and independent recall.
+- **Reflex routing** — intent-sensitive recall lanes, bounded query rewriting, evidence scoring, and silence when recall is not useful.
+- **Raw chat history** — read-only dialogue evidence through an independent CJK FTS index and bounded context windows.
+- **Maintenance and recovery** — clustering, decay, edge cleanup, health checks, durable projection outboxes, and full Chroma/Kuzu rebuilds from SQLite.
 
-Throughout the code and documentation, `manual`, `review`, `annotate`,
-`approve`, `reject`, `promote`, and `demote` mean deliberate actions performed
-by the AI agent itself. Automated components may preserve evidence, retrieve
-candidates, or prepare bounded proposals, but they do not transfer semantic
-authorship to a human administrator.
+## Install
 
-## What's inside
-
-```
-message in
-    │
-    ▼
-┌─────────┐    ┌───────────┐    ┌──────────┐    ┌──────────┐
-│  Reflex  │───▶│   Recall  │───▶│  Inject  │───▶│   Heat   │
-│  Router  │    │  Pipeline │    │   Gate    │    │  Confirm │
-└─────────┘    └───────────┘    └──────────┘    └──────────┘
-  15 intent      FTS5 + vec       adapter         idempotent
-  classes        + RRF + flow     decides         activation
-                 + rerank
-
-              ┌───────────┐    ┌──────────┐    ┌──────────┐
-              │  Beliefs  │    │ Theseus  │    │   Chat   │
-              │  Engine   │    │  Wenku   │    │ History  │
-              └───────────┘    └──────────┘    └──────────┘
-              confidence +      chunk valid.    FTS5 + CJK
-              dream review      + hydration     read-only
-
-              ┌───────────┐    ┌──────────┐
-              │ Taxonomy  │    │  Night   │
-              │ (LLM)     │    │  Batch   │
-              └───────────┘    └──────────┘
-              closed 5-axis     decay, merge
-              with retry        cluster, heal
-```
-
-**Reflex router** — 15 intent classes with bilingual (EN + CJK) pattern
-matching. Each class maps to allowed recall lanes, query rewriting bounds, and
-answer mode. Deterministic decision IDs for tracing.
-
-**Recall pipeline** — FTS5 full-text, vector similarity, reciprocal-rank fusion,
-flow-edge diffusion, temporal resolution, and reranking. Multiple signals fuse
-into one ranked candidate list.
-
-**Belief system** — Beliefs are hypotheses with confidence scores from
-emotion-weighted, time-decayed cases. Support, contradict, or bound a belief.
-Promote and demote with audit trails. `dream_pass` runs counterexample review
-overnight.
-
-**Theseus / Wenku** — Lossless chunk validation (consecutive numbering, source
-reconstruction, label bounds, enum membership). Deterministic policy
-enforcement. Neighboring-chunk hydration under character budget.
-
-**Taxonomy** — LLM-backed 5-axis closed vocabulary (`state`, `domain`, `action`,
-`kind`, `heat`). Durable retry outbox for failed classifications.
-
-**Maintenance** — Activation decay, anti-island cleanup, LLM-driven memory
-clustering, health checks. Every command supports `--dry-run` and `--json`.
-
-**Recall evaluation** — Trace → extract → annotate → score. Measures
-`precision_strict`, `precision_loose`, pool-hit split, and silence pass rate.
-The memory-owning AI agent annotates captured cases in a separate reflective
-pass; the decision pipeline being evaluated cannot assign its own verdict.
-
-## Quick start
+Python 3.10–3.12 is supported.
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
-pip install -e .
-
-# generate a synthetic demo database
-python scripts/generate_demo_db.py --data-dir ./data --json
-
-# recall
-anchor-demo --config config/anchor.example.toml recall "violet coolant"
-
-# health check
-anchor-maintenance health --config config/anchor.example.toml --json
-```
-
-No API keys needed for the default local embedding and rerank providers.
-
-On Windows: `.venv\Scripts\activate`.
-
-### Optional projections
-
-```bash
-pip install -e ".[chroma]"    # vector store
-pip install -e ".[kuzu]"      # graph projection
-pip install -e ".[full]"      # both + jieba CJK segmentation
-```
-
-Set `ANCHOR_CHROMA_DIR` or `ANCHOR_KUZU_DIR` to enable. Missing packages never
-block SQLite writes — projection work is queued in a durable outbox and drained
-by `shadow-refresh` in the background.
-
-## MCP server
-
-```bash
-pip install -e ".[server,mcp]"
-python -m anchor_memory.api.mcp
-```
-
-Ten tools: `briefing`, `store_memory`, `search_memory`, `chat_history`,
-`memory_edit`, `thread`, `wenku_read`, `belief`, `dream_pass`, `graph_review`.
-
-Mechanical maintenance and injection confirmation are internal operations, not
-daily tools.
-
-## REST API
-
-```bash
-uvicorn anchor_memory.api.rest:create_app --factory --host localhost --port 8080
-```
-
-Candidate recall is read-only. A channel adapter calls the injection
-confirmation endpoint only after selecting the exact IDs inserted into model
-context. Stable event IDs make heat idempotent.
-
-## Tests
-
-```bash
+python -m venv .venv
+. .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 ```
 
-The suite includes unit, integration, and contract tests. Optional projection
-tests run when Chroma/Kuzu are installed.
+On Windows, activate the environment with `.venv\Scripts\activate`.
 
-To reproduce the clean Python matrix:
+Optional components:
 
 ```bash
-python scripts/run_python_matrix.py --output evidence.json
+pip install -e ".[chroma]"               # Chroma vector recall
+pip install -e ".[kuzu]"                 # Kuzu graph projection
+pip install -e ".[server,chroma,kuzu]"   # REST + MCP + projections
 ```
 
-Builds managed Python 3.10/3.11/3.12 environments, runs the full suite,
-validates dependency licenses, and emits path-free JSON evidence.
+The base installation uses SQLite/FTS and a deterministic offline embedder. Missing optional projections never block an authoritative SQLite write.
 
-## Documentation
+## Quick start
 
-- [Architecture](docs/architecture.md)
-- [Data model](docs/data-model.md)
-- [Recall pipeline](docs/recall-pipeline.md)
-- [Full cognition chain](docs/full-chain.md)
-- [Maintenance](docs/maintenance.md)
-- [Security](SECURITY.md)
+```python
+from anchor_memory import AnchorMemory
 
-## Privacy
+memory = AnchorMemory("./data")
 
-The clean-tree builder uses a versioned allowlist, verifies local import
-closure, rejects symlinks and runtime artifacts, and writes a SHA-256 manifest.
-The release verifier reports only rule names, file names, and line numbers — it
-never echoes a suspected secret.
+memory.integrate(
+    "The fictional observatory recalibrated its blue sensor.",
+    "raw",
+    memory_id="demo-001",
+    auto_link=False,
+)
 
-This repository contains only synthetic examples. Do not create fixtures by
-exporting and renaming production memories.
+result = memory.recall("blue sensor calibration", budget=3)
+print(result["results"])
+```
 
-## Lineage
+Candidate recall is read-only. After the caller actually injects selected memories into model context, it can confirm heat with a stable event ID:
 
-This project is a heavily modified derivative of
-[Anchor Memory](https://github.com/limen-threshold/anchor-memory) by Limen.
-The downstream fork shares Git history with upstream through
-[`8dd2133`](https://github.com/limen-threshold/anchor-memory/commit/8dd21337c2b87ff6d876dc269b475242650ea56e)
-(v1.3.2, April 2026), then evolved independently with substantial architectural
-changes to storage, recall, belief, routing, maintenance, and evaluation.
+```python
+memory.db.apply_heat(
+    [item["memory_id"] for item in result["results"]],
+    0.12,
+    event_id="conversation-0001",
+    spread=True,
+    source="recall",
+)
+```
 
-This public repository is rebuilt from a sanitized source tree. It preserves the
-upstream MIT license but does not include private downstream Git history.
+## REST and MCP
 
-## License
+Install the server extra and start both loopback listeners:
 
-[MIT](LICENSE)
+```bash
+pip install -e ".[server]"
+python -m anchor_sse
+```
+
+Defaults:
+
+- REST: `127.0.0.1:8765`
+- Streamable HTTP MCP: `127.0.0.1:8768`
+
+Configure them with `ANCHOR_REST_HOST`, `ANCHOR_REST_PORT`, `ANCHOR_STREAMABLE_HOST`, and `ANCHOR_STREAMABLE_PORT`. Do not expose either listener publicly without authentication and a reverse proxy.
+
+The MCP surface provides ten tools: `briefing`, `store_memory`, `search_memory`, `chat_history`, `memory_edit`, `thread`, `wenku_read`, `belief`, `dream_pass`, and `graph_review`.
+
+## Configuration
+
+Runtime paths are configurable through environment variables or a TOML file passed with `ANCHOR_CONFIG_FILE`. Common settings include:
+
+| Variable | Purpose |
+| --- | --- |
+| `ANCHOR_DATA_DIR` | Runtime data directory |
+| `ANCHOR_DB_PATH` | Authoritative SQLite database |
+| `ANCHOR_CHROMA_DIR` | Chroma projection directory |
+| `ANCHOR_KUZU_DIR` | Kuzu projection directory |
+| `ANCHOR_CHAT_HISTORY_PATH` | Read-only dialogue database |
+| `ANCHOR_EMBED_PROVIDER` | Embedding provider selection |
+| `ANCHOR_TAXONOMY_URL` | OpenAI-compatible taxonomy endpoint |
+| `ANCHOR_TAXONOMY_API_KEY` | Taxonomy provider credential |
+| `ANCHOR_TAXONOMY_MODEL` | Taxonomy model name |
+
+Credentials must come from the process environment or an explicitly configured external file; do not commit them.
+
+## Rebuild projections
+
+SQLite can rebuild both optional projections into a new directory:
+
+```bash
+python scripts/rebuild_projections.py \
+  --source-db ./data/memories.db \
+  --output-dir ./projection-rebuild
+```
+
+The command exits nonzero unless SQLite, Chroma, and Kuzu counts agree. The output is private runtime data and should not be committed.
+
+## Project layout
+
+- `src/` — memory, recall, graph, belief, routing, review, and maintenance modules
+- `tests/` — unit, contract, server-surface, and real-projection tests
+- `scripts/` — projection rebuild and backfill utilities
+- `examples/` — OAuth interface shape and health dashboard
+- `docs/architecture.md` — storage, recall, governance, and projection boundaries
+
+## Upstream and license
+
+This project is a heavily modified derivative of [Anchor Memory](https://github.com/limen-threshold/anchor-memory) by Limen. Upstream attribution is preserved in [NOTICE](NOTICE).
+
+Released under the [MIT License](LICENSE).
