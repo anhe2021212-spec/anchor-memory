@@ -138,7 +138,7 @@ def store_memory(text: str, tag: str = "general", tier: str = "long",
     tag: 不用传。五轴坐标(state/domain/action/kind/heat)由小LLM存入后自动打，
          tag是纯机器字段——你写肉，机器钉坐标。搜记忆走自然语言正文，不依赖tag。
     三层判断：
-    • raw：随手存。事件、对话、细节、触动、她冒出来的一句话。
+    • raw：随手存。事件、对话、细节、触动、对话中值得保留的一句话。
     • understanding：跨事件的观察，不是结论。写观察不写结论——"这些事情总是一起出现"就够了。
       understanding是照片背面的便签，不是判决书。三层：经历(raw)、观察(understanding)、相信(cognition)。
       用case格式写：「情境」→「动作」→「结果」→「教训」
@@ -443,7 +443,7 @@ def thread(type: str, title: str, body: str, tags: str = "", evokes: str = "") -
     if t not in _WENKU_TYPE_PREFIXES:
         return (f"type 未知: '{type}'\n"
                 f"允许: {' / '.join(_WENKU_TYPE_PREFIXES)}\n"
-                f"(拿不准就传 '待定', 安会过目时帮你定)")
+                f"(拿不准就传 '待定', 后续可由维护者复核)")
     tag = t if not tags else f"{t},{tags}"
     text = f"《{title}》\n{body}" if title else body
     try:

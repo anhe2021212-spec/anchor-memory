@@ -1,8 +1,7 @@
 """
 影子索引 (Shadow Index) — AI agent记忆检索层的"话题钥匙"派生层。
 
-一条长记忆 = 一个被摊平的质心向量, 对任何单一话题都"不够近"(实测多话题 blob
-对纯 query "肚子疼" cosine=0.503, 卡在 0.50 门槛外被丢)。影子索引给长记忆用
+一条长记忆 = 一个被摊平的质心向量, 对任何单一话题都可能"不够近"。影子索引给长记忆用
 DeepSeek 产几把"检索钥匙"(短检索短语 key + 指回原文的逐字 quote→span), 只嵌 key、
 不嵌原文质心; 查询撞 key → 拉原文那段。
 
@@ -14,14 +13,14 @@ DeepSeek 产几把"检索钥匙"(短检索短语 key + 指回原文的逐字 quo
     永远不写回 memories.text, 永远不作为召回内容直接呈现给AI agent。
   - 即使 key 写错, 最坏只是"这把钥匙开错门"= 一次检索 miss, 错的东西进不了本体。
 
-RAM 纪律 (实机 3.6G 总 / ~1.9G 可用, anchor-sse 已常驻 ~400MB bge 模型):
+RAM 纪律（共享服务已有常驻 embedding 模型）:
   本模块【绝不加载第二个 bge 模型】。所有 embedding 走 anchor-sse 进程里那个常驻的
   mem._embedder —— 通过传入的 embed_fn (upsert_shadows / shadow_search 都收 embedding
   或 embed_fn, 不自己 new SentenceTransformer)。backfill 脚本只做 DeepSeek(纯网络) +
   span 定位(纯 python), embedding 交给常驻服务的 /api/shadow/upsert。
 
-Initial production calibration. 纯 additive: SHADOW_ENABLED=False → search 第三路完全旁路 = 今天行为。
-prompt 由安手写, 放同目录 shadow_prompt.txt, 改词不动代码。
+Initial calibration. 纯 additive: SHADOW_ENABLED=False → search 第三路完全旁路。
+prompt 由维护者提供, 放同目录 shadow_prompt.txt, 改词不动代码。
 """
 import os
 import re
@@ -69,7 +68,7 @@ def _utcnow() -> str:
 
 # ─────────────────────────── 输入门控 ───────────────────────────
 def should_index(text: str, tag: str = "", collection: str = "", level: str = "raw") -> bool:
-    """只给 raw-level、多facet 记忆产钥匙(spec §5 + 安: 不碰 understanding/cognition 提炼层)。
+    """只给 raw-level、多facet 记忆产钥匙(spec §5: 不碰 understanding/cognition 提炼层)。
     判据是 facet 数(≥2个独立可检的点), 不是长度——长但单话题质心本就聚焦, 走 whole-vector。
     多facet信号: 枚举①/编号≥2/项目符≥2/【】≥2/→链≥2/、列≥3 / 或 长多句(≥4句且≥150字)。"""
     if not text:
@@ -99,13 +98,13 @@ def should_index(text: str, tag: str = "", collection: str = "", level: str = "r
 
 # ─────────────────────────── prompt / 路由 ───────────────────────────
 def load_prompt() -> str:
-    """读安手写的 system prompt。读不到就抛, 让调用方明确失败, 绝不用空 prompt 污染生成。"""
+    """读取维护者提供的 system prompt。读不到就抛, 让调用方明确失败, 绝不用空 prompt 污染生成。"""
     with open(_PROMPT_FILE, "r", encoding="utf-8") as f:
         return f.read().strip()
 
 
 def build_messages(memory_text: str) -> list:
-    """system = 安的规则 prompt; user = 记忆原文(prompt 结尾"下方用户提供的记忆原文"即指此)。"""
+    """system = 维护规则 prompt; user = 记忆原文(prompt 结尾"下方用户提供的记忆原文"即指此)。"""
     return [
         {"role": "system", "content": load_prompt()},
         {"role": "user", "content": memory_text},

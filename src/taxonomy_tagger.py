@@ -39,7 +39,7 @@ PROMPT = """你是记忆库的打标器。给每条记忆打标签，只用下�
 判据：讲"一件事"→past；讲"一个还在持续的状态"→current；讲"一个人/关系是什么样"→stable。
 
 2. 内容域 domain:
-- domain:relationship 只用于 agent 与长期对话对象之间的关系/亲密/冲突/和好；外部人际优先 social
+- domain:relationship 用于长期互动、信任与协作关系的变化；一般外部人际优先 social
 - domain:health 身体/睡眠/吃饭/精神状态
 - domain:work 工作/职业/赚钱/曾经的职业经历
 - domain:family 家人/父母/亲戚

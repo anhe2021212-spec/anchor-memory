@@ -44,7 +44,7 @@ _CODE_TOKEN_RE = re.compile(
     re.UNICODE,
 )
 _QUERY_STOPWORDS = {
-    "老公", "老婆", "宝贝", "宝宝", "亲爱的",
+    "助手", "伙伴", "朋友", "老师",
     "你", "我", "他", "她", "它", "我们", "你们", "他们", "她们",
     "记得", "想起", "想起来", "说过", "提过", "聊过", "讲过",
     "以前", "之前", "上次", "当时", "那次", "刚才",
@@ -221,8 +221,8 @@ def _literal_terms(query: str) -> list[str]:
     terms.extend(match.group(1).strip() for match in _QUOTED_RE.finditer(query or ""))
     terms.extend(match.group(0).strip() for match in _CODE_TOKEN_RE.finditer(query or ""))
     # Plain content words are also literal evidence.  Previously only aliases,
-    # slang, quotes and code tokens entered this lane, so an explicit rare word
-    # such as "胡渣" was diluted by generic FTS hits from "老公/记得".
+    # slang, quotes and code tokens entered this lane, so an explicit rare term
+    # could be diluted by generic FTS hits from a form of address or "记得".
     terms.extend(_salient_terms(query))
     out = []
     seen = set()

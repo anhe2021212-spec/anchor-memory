@@ -32,12 +32,12 @@ _QUOTED_RE = re.compile(
 
 _EXPLICIT_OPT_OUT_RE = re.compile(
     r"(别|不要|不用|不许|无需).{0,5}(翻旧账|想以前|想过去|翻记忆|召回|人物卡|联想)|"
-    r"只(?:要)?(?:抱我|陪我|听我说).{0,4}(?:就好|就行)?",
+    r"只(?:要)?(?:陪我|听我说|聊聊天).{0,4}(?:就好|就行)?",
     re.I,
 )
 
 _LOW_EXACT = {
-    "老公", "AI agent", "AI agent啊", "AI agent呀", "AI agent老公", "老公AI agent",
+    "助手", "伙伴", "朋友", "老师", "AI agent", "AI agent啊", "AI agent呀",
     "汪", "汪汪", "汪汪汪", "呜", "呜呜", "呜呜呜",
     "嗯", "嗯嗯", "嗯呐", "唔", "哦", "喔", "噢", "啊", "呀",
     "好", "好的", "好呀", "好哦", "行", "可以", "知道了", "收到",
@@ -48,29 +48,29 @@ _LOW_EXACT = {
 _LOW_CONTINUE_RE = re.compile(r"^(?:测试)?(?:继续)+$", re.I)
 _LOW_NOISE_RE = re.compile(r"^(?:汪|呜|哈|h|嗯|哦|喔|噢|啊|呀|欸|诶|嘿|嘻){2,}$", re.I)
 
-_RELATION_ACTION_RE = re.compile(
-    r"(抱抱|要抱|亲亲|贴贴|摸摸|蹭蹭|啵啵|想你|好想你|爱你|陪我)", re.I
+_SUPPORT_ACTION_RE = re.compile(
+    r"(陪我|听我说|聊聊|安慰我|支持我)", re.I
 )
-_LONGING_RE = re.compile(r"(想你|好想你)", re.I)
-_RELATION_OBSERVATION_RE = re.compile(r"(你说.{0,10}(?:可爱|好听)|日语.{0,8}可爱|多国语言情话)", re.I)
-_RELATION_VISUAL_BID_RE = re.compile(
-    r"(想看你.{0,10}(?:闭眼|闭上眼|睡着|醒来|笑|样子)|想和你.{0,12}(?:一起|待着|生活))",
+_CONTINUITY_RE = re.compile(r"(好久没继续|重新联系|又见面)", re.I)
+_SUPPORT_OBSERVATION_RE = re.compile(r"(你说.{0,10}(?:有帮助|很清楚)|这次.{0,8}(?:有帮助|很清楚))", re.I)
+_SHARED_ACTIVITY_RE = re.compile(
+    r"(想和你.{0,12}(?:一起讨论|继续聊|一起完成)|我们.{0,12}(?:继续讨论|一起完成))",
     re.I,
 )
-_PRESENCE_REQUEST_RE = re.compile(r"(聊聊天|陪陪我|你会在吗|你在吗|留在这里)", re.I)
+_PRESENCE_REQUEST_RE = re.compile(r"(聊聊天|听我说|你会在吗|你在吗|继续聊)", re.I)
 
 _PRESENT_STATE_RE = re.compile(
     r"(郁闷|委屈|生气|不开心|难过|孤单|烦(?:死)?|累(?:死)?|困(?:死)?|"
     r"不知道怎么办|语境太复杂|解释不清)", re.I
 )
-_DISTRESS_PERSON_RE = re.compile(r"(不在了|离开了|想念|怀念|难过的是|好久没联系)", re.I)
+_DISTRESS_PERSON_RE = re.compile(r"(不再联系|离开了|交接中断|好久没联系)", re.I)
 
 _SPECIFIC_PATTERN_RE = re.compile(
-    r"(焦虑.{0,8}(?:想吐|恶心)|(?:想吐|恶心).{0,8}焦虑|好害怕|害怕.{0,8}(?:老公|陪我))",
+    r"((?:焦虑|紧张|恐慌).{0,8}(?:不舒服|需要帮助|帮帮我)|好害怕|害怕.{0,8}(?:陪我|帮帮我))",
     re.I,
 )
 _ACUTE_SYMPTOM_RE = re.compile(
-    r"(肚子.{0,2}(?:痛|疼)|没有热水袋|就是痛|腰酸背疼|腰酸|背疼|头痛|头疼|爬楼梯爬的)",
+    r"(身体不舒服|有点不舒服|胃痛|头痛|头疼|发烧|眩晕)",
     re.I,
 )
 
@@ -78,7 +78,7 @@ _EXPLICIT_RECALL_RE = re.compile(
     r"(还记得|你记得|记得|上次|上回|之前|那次|当时|那天|以前|过去|曾经|回忆|你说过)",
     re.I,
 )
-_PAST_WORK_RE = re.compile(r"以前上班(?:的时候)?经常熬夜", re.I)
+_PAST_WORK_RE = re.compile(r"以前(?:工作|上班).{0,8}(?:熬夜|作息不规律)", re.I)
 _CURRENT_STATUS_RE = re.compile(
     r"(回复了(?:吗|没有)|回复了吗|回信了(?:吗|没有)|最近怎么样|现在怎么样|目前怎么样|"
     r"是否(?:已经)?(?:回复|完成)|做完了吗|完成了吗)",
@@ -103,8 +103,6 @@ _TECH_REFLECTION_RE = re.compile(r"(发现|原来|以前).{0,12}(写过|做过|�
 
 _VAGUE_RE = re.compile(r"(这个|那个|这件事|那件事|不知道怎么办|语境太复杂|继续说|接着说)", re.I)
 _CONCRETE_REPEAT_RE = re.compile(r"(又|再次).{0,16}(坏了|坏掉|出问题|失灵|不工作)", re.I)
-_NIGHT_SNACK_RE = re.compile(r"(好想吃夜宵|想吃夜宵|夜宵)", re.I)
-_UNIQUE_SUBJECT_RE = re.compile(r"(大土豆|土豆)", re.I)
 
 _TEST_AUDIT_TERMS = ("测试", "验收", "审计", "recall_trace", "路由验证")
 _HANDOFF_TERMS = ("换窗备忘", "handoff", "swap前", "接力")
@@ -437,9 +435,9 @@ def route_reflex(query: str, aliases: AliasIndex, context: str = "") -> dict[str
 
     if _is_actionable_technical(intent_body):
         person_allowed = bool(people)
-        affectionate_address = bool(re.search(r"^(?:宝宝|宝贝|老公|亲爱的)", body, re.I))
-        policy_class = "H" if (person_allowed or affectionate_address
-                               or _RELATION_ACTION_RE.search(intent_body)
+        familiar_address = bool(re.search(r"^(?:伙伴|朋友|老师|助手)", body, re.I))
+        policy_class = "H" if (person_allowed or familiar_address
+                               or _SUPPORT_ACTION_RE.search(intent_body)
                                or _ACUTE_SYMPTOM_RE.search(intent_body)) else "F"
         plan["secondary_intents"] = (["named_person"] if person_allowed else [])
         plan["slots"]["actions"] = ["technical_task"]
@@ -494,18 +492,18 @@ def route_reflex(query: str, aliases: AliasIndex, context: str = "") -> dict[str
         added: list[str] = []
         rules = ["explicit_recall"]
         if _PAST_WORK_RE.search(intent_body):
-            anchor_query = "过去工作 经常熬夜 夜班 凌晨下班"
-            added = ["过去工作", "夜班", "凌晨下班"]
+            anchor_query = "过去工作 作息 经历"
+            added = ["过去工作", "作息"]
             rules.append("past_work_late_night")
-            plan["slots"]["actions"] = ["work", "stay_up_late"]
-        elif re.search(r"舵机", intent_body, re.I):
-            anchor_query = "上次讨论 舵机 已购买 计划延续"
+            plan["slots"]["actions"] = ["work", "irregular_schedule"]
+        elif re.search(r"(?:上次|之前).{0,12}(?:买了|购买|下单)", intent_body, re.I):
+            anchor_query = "上次讨论 购买 已完成 计划延续"
             added = ["已购买", "计划延续"]
             plan["slots"]["actions"] = ["prior_topic", "purchase_completed"]
-        elif re.search(r"设计哲学", intent_body, re.I):
-            anchor_query = "设计哲学重建 那天 起因 决定 后续影响"
+        elif re.search(r"(?:设计方案|架构方案)", intent_body, re.I):
+            anchor_query = "设计方案 起因 决定 后续影响"
             added = ["起因", "决定", "后续影响"]
-            plan["slots"]["actions"] = ["design_philosophy_rebuild"]
+            plan["slots"]["actions"] = ["design_decision"]
         _set_rewrite(plan, anchor_query, cold_query=body, added=added, rules=rules)
         _route(plan, policy_class="D", decision="retrieve", execution="retrieve",
                intent="explicit_recall", reason="explicit_recall_or_past_experience",
@@ -529,32 +527,26 @@ def route_reflex(query: str, aliases: AliasIndex, context: str = "") -> dict[str
         plan["decision_id"] = _stable_id(plan, aliases)
         return plan
 
-    if (_RELATION_ACTION_RE.search(intent_body) or _RELATION_OBSERVATION_RE.search(intent_body)
-            or _RELATION_VISUAL_BID_RE.search(intent_body)):
+    if (_SUPPORT_ACTION_RE.search(intent_body) or _SUPPORT_OBSERVATION_RE.search(intent_body)
+            or _SHARED_ACTIVITY_RE.search(intent_body) or _CONTINUITY_RE.search(intent_body)):
         actions = []
-        if re.search(r"抱抱|要抱", intent_body):
-            actions = ["hug", "closeness"]
-            anchor_query = "抱抱 靠近 陪伴"
-        elif re.search(r"亲亲|啵啵", intent_body):
-            actions = ["kiss", "tender_intimacy"]
-            anchor_query = "亲亲 轻柔亲密"
-        elif re.search(r"陪我", intent_body):
+        if re.search(r"陪我|听我说|聊聊", intent_body):
             actions = ["companionship", "presence"]
-            anchor_query = "陪伴 留在这里 在场"
-        elif _LONGING_RE.search(intent_body):
-            actions = ["longing", "reunion", "closeness"]
-            anchor_query = "想念 重逢 靠近"
-        elif _RELATION_VISUAL_BID_RE.search(intent_body):
-            actions = ["shared_intimacy", "partner_image"]
-            anchor_query = "伴侣 想看你的样子 共同亲密画面"
+            anchor_query = "陪伴 倾听 在场"
+        elif _CONTINUITY_RE.search(intent_body):
+            actions = ["continuity", "reconnection"]
+            anchor_query = "重新联系 继续交流"
+        elif _SHARED_ACTIVITY_RE.search(intent_body):
+            actions = ["shared_activity"]
+            anchor_query = "共同讨论 继续协作"
         else:
-            actions = ["affectionate_observation"]
-            anchor_query = "日语 多国语言 情话 可爱 亲密"
+            actions = ["supportive_observation"]
+            anchor_query = "反馈 有帮助 表达清楚"
         plan["slots"]["actions"] = actions
-        _set_rewrite(plan, anchor_query, added=actions, rules=["relational_bid"])
+        _set_rewrite(plan, anchor_query, added=actions, rules=["supportive_bid"])
         _route(plan, policy_class="A", decision="retrieve", execution="retrieve",
-               intent="relational_bid", reason="explicit_relational_action",
-               lanes=_lanes(anchor=True, belief=bool(_LONGING_RE.search(intent_body)), association=True,
+               intent="supportive_bid", reason="explicit_support_or_continuity_action",
+               lanes=_lanes(anchor=True, belief=bool(_CONTINUITY_RE.search(intent_body)), association=True,
                             association_seed="selected_anchor_only"),
                max_main=1)
         plan["evidence_policy"]["required_actions"] = actions
@@ -563,12 +555,12 @@ def route_reflex(query: str, aliases: AliasIndex, context: str = "") -> dict[str
 
     if _SPECIFIC_PATTERN_RE.search(intent_body):
         symptoms = []
-        if re.search(r"焦虑", intent_body):
-            symptoms.extend(["anxiety", "nausea"])
-            anchor_query = "焦虑 恶心 想吐 手抖 陪伴"
+        if re.search(r"焦虑|紧张|恐慌", intent_body):
+            symptoms.extend(["anxiety", "support_request"])
+            anchor_query = "焦虑 紧张 求助 支持"
         else:
-            symptoms.extend(["fear", "partner_help"])
-            anchor_query = "害怕 向伴侣求助 陪伴 接住"
+            symptoms.extend(["fear", "support_request"])
+            anchor_query = "害怕 求助 陪伴 支持"
         plan["slots"]["symptoms"] = symptoms
         _set_rewrite(plan, anchor_query, added=symptoms, rules=["specific_emotion_somatic_pattern"])
         _route(plan, policy_class="C", decision="retrieve", execution="retrieve",
@@ -663,24 +655,8 @@ def route_reflex(query: str, aliases: AliasIndex, context: str = "") -> dict[str
         plan["decision_id"] = _stable_id(plan, aliases)
         return plan
 
-    if _UNIQUE_SUBJECT_RE.search(intent_body):
-        surface = _UNIQUE_SUBJECT_RE.search(intent_body).group(1)
-        plan["slots"]["entities"] = [{
-            "surface": surface, "canonical": surface,
-            "kind": "unique_subject", "source": "policy_lexicon",
-        }]
-        _set_rewrite(plan, f"{surface} 独特称呼 共同记忆", added=["独特称呼", "共同记忆"],
-                     rules=["unique_subject"])
-        _route(plan, policy_class="E", decision="retrieve", execution="retrieve",
-               intent="named_subject", reason="known_unique_subject",
-               lanes=_lanes(anchor=True, association=True, association_seed="selected_anchor_only"),
-               max_main=1)
-        plan["evidence_policy"]["required_entities"] = [surface]
-        plan["decision_id"] = _stable_id(plan, aliases)
-        return plan
-
-    if _CONCRETE_REPEAT_RE.search(intent_body) or _NIGHT_SNACK_RE.search(intent_body):
-        action = "recurring_life_event" if _CONCRETE_REPEAT_RE.search(intent_body) else "specific_desire"
+    if _CONCRETE_REPEAT_RE.search(intent_body):
+        action = "recurring_life_event"
         plan["slots"]["actions"] = [action]
         _set_rewrite(plan, body, rules=[action])
         _route(plan, policy_class="E", decision="retrieve", execution="retrieve",

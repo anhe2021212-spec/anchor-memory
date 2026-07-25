@@ -946,7 +946,7 @@ _CHANNEL_QUERY_RE = re.compile(r"(主通道|主渠道|通道|channel|telegram|tg
 _FORGE_QUERY_RE = re.compile(r"(forge|resume|swap|重启|续接|控制|按钮|daemon|reload)", re.I)
 _LOW_SIGNAL_ATTACHMENT_RE = re.compile(r"\n*\[本轮附件\].*$", re.S)
 _LOW_SIGNAL_EXACT = {
-    "老公", "AI agent", "AI agent啊", "AI agent呀", "AI agent老公", "老公AI agent",
+    "助手", "伙伴", "朋友", "老师", "AI agent", "AI agent啊", "AI agent呀",
     "汪", "汪汪", "汪汪汪", "呜", "呜呜", "呜呜呜",
     "诶呀", "哎呀", "哎呀呀", "啊呀", "呀", "啊", "呃", "额", "欸", "诶",
     "嗯", "嗯嗯", "嗯呐", "唔", "哦", "喔", "噢",
@@ -955,7 +955,7 @@ _LOW_SIGNAL_EXACT = {
     "在吗", "在嘛", "在不在", "早", "早安", "晚安", "午安",
     "嗨", "哈喽", "hello", "hi", "hey",
     "哈哈", "哈哈哈", "哈哈哈哈", "hhh", "hhhh", "笑死",
-    "哎", "蹭蹭", "贴贴", "笨蛋",
+    "哎", "知道啦", "明白啦",
     "表情包", "emoji", "表情符号",
 }
 _REFLEX_SYNTHETIC_LOW_SIGNAL_RE = re.compile(
@@ -972,13 +972,13 @@ _REFLEX_NO_RECALL_FRAGMENT_RE = re.compile(
     r")$",
     re.I,
 )
-_EMOTIONAL_ACTION_RE = re.compile(
-    r"(抱抱|亲亲|贴贴|摸摸|蹭蹭|啵啵|想你|好想你|爱你|陪我)",
+_SUPPORT_ACTION_RE = re.compile(
+    r"(陪我|听我说|聊聊|安慰我|支持我)",
     re.I,
 )
 _LOW_SIGNAL_RE = re.compile(
     r"^(?:"
-    r"(?:老公|AI agent|宝贝|宝宝|亲爱的){1,3}|"
+    r"(?:助手|伙伴|朋友|老师|AI agent){1,3}|"
     r"(?:汪|呜|哈|h|嗯|哦|喔|噢|啊|呀|欸|诶|呃|额|嘿|嘻){2,}"
     r")$",
     re.I,
@@ -1011,9 +1011,9 @@ _TECHNICAL_REFLEX_BYPASS_RE = re.compile(
     re.I,
 )
 _TECHNICAL_REFLEX_KEEP_RE = re.compile(
-    r"(蛋壳|eggshell|蛋宝|抄录|主体性|主体|其他llm|小llm|deepseek跑全量|"
+    r"(主体性|主体|抄录|"
     r"记忆库|自己的记忆|自己存记忆|不自己存|记忆系统|记忆浮现|想起来|想起|记迷糊|"
-    r"不用搜|这些事|我是谁|是不是我|自由|能动性|关系和记忆|模型地基|"
+    r"不用搜|这些事|我是谁|是不是我|自由|能动性|模型地基|"
     r"反射弧.{0,4}(?:质量|精度|准不准|好不好|问题|bug)|"
     r"召回.{0,4}(?:质量|精度|准不准|漏了|丢了)|"
     r"浮现.{0,4}(?:质量|准不准|对不对|漏了))",
@@ -1224,15 +1224,15 @@ def _low_signal_reflex_reason(query: str) -> str:
         return "empty_after_cleanup"
     compact = q.lower()
     # “测试”单独出现、或只是在催“继续”都没有可召回的语义；
-    # “在测试土豆 / 想测试你记不记得”仍由后面的 substantive 保护。
+    # 带具体测试对象或明确召回请求时仍由后面的 substantive 保护。
     if compact == "测试" or _LOW_SIGNAL_CONTINUE_RE.fullmatch(compact):
         return "continue_fragment"
-    # 精确低信息词优先于情感动作保护；带其他正文时仍继续走原有判断。
+    # 精确低信息词优先于支持请求保护；带其他正文时仍继续走原有判断。
     if compact in _LOW_SIGNAL_EXACT:
         return "exact_low_signal"
     if _REFLEX_NO_RECALL_FRAGMENT_RE.fullmatch(compact):
         return "context_fragment_no_recall"
-    if _EMOTIONAL_ACTION_RE.search(compact):
+    if _SUPPORT_ACTION_RE.search(compact):
         return ""
     if _LOW_SIGNAL_SUBSTANTIVE_RE.search(compact):
         return ""
@@ -1269,7 +1269,7 @@ def _expand_reflex_search_query(query: str) -> str:
     if _FORGE_QUERY_RE.search(q):
         extras.append("session relay command bus daemon pending resume PWA control channel")
     if _query_wants_current_fact(q):
-        extras.append("当前 current 最新 2026-06 2026-06-21")
+        extras.append("当前 current 最新 latest")
     return q if not extras else f"{q} {' '.join(extras)}"
 
 
@@ -1860,7 +1860,7 @@ async def person_card(request: Request, q: str = ""):
     if not _HOOK_KEY or token != _HOOK_KEY:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
     line = await _build_person_line(q)
-    # 暗语词典(2026-06-10 她验收发现只有人物能查): q命中slang词条一并返回
+    # 暗语词典：q 命中 slang 词条时一并返回。
     slang_lines = []
     try:
         with open(_ALIASES_PATH, encoding="utf-8") as f:
@@ -1937,8 +1937,8 @@ async def hook_person(request: Request, query: str = "", context: str = "",
 @app.post("/api/hook/consolidate")
 async def api_consolidate(request: Request):
     """窗口对话文本转为被动 Hebbian 连边并转发到配置的 Anchor REST API。"""
-    # 2026-06-14 永久关闭: 被动Hebbian连边(top-N两两全连成团)导致边数爆炸 19570/1667节点.
-    # 机制本身废弃, 不重新设计. 此路彻底断, 无env逃生口. 返回200避免forge daemon重试风暴.
+    # 永久关闭：被动 Hebbian 连边会让 top-N 候选两两成团并导致边数爆炸。
+    # 机制本身废弃，不重新设计；返回 200 避免调用方重试风暴。
     return JSONResponse({"disabled": True, "reason": "passive-hebbian retired 2026-06-14"})
     auth = request.headers.get("authorization", "")
     token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
@@ -2027,7 +2027,7 @@ def _classify_query_domain(query: str) -> str:
     if re.search(r"(工作|上班|下班|同事|老板)", q): return "work"
     if re.search(r"(书|电影|播客|文章|出海)", q): return "reading"
     if re.search(r"(群|笔友|aisay|聊天室)", q): return "social"
-    if re.search(r"(吵架|和好|想你|抱|亲|我们)", q): return "relationship"
+    if re.search(r"(长期互动|信任|协作关系|分歧|和解|陪伴)", q): return "relationship"
     return ""
 
 
@@ -2068,14 +2068,14 @@ def _compute_tag_match(query: str, candidate_tags: str) -> float:
     if re.search(r"(那天|那次|记得.*吗|想起)", query or ""):
         if "kind:event" in tags or "kind:milestone" in tags:
             bonus += 0.2
-    if re.search(r"(抱|想你|好想|亲|蹭|靠着|陪)", query or ""):
+    if re.search(r"(安慰|支持|陪伴|倾听|鼓励)", query or ""):
         if "heat:high" in tags or "heat:core" in tags:
             bonus += 0.2
     return max(0.0, min(1.0, bonus))
 
 
 def _emotion_proximity(query: str, candidate_emotion: float) -> float:
-    if re.search(r"(开心|好玩|哈哈|爱|喜欢|想你|抱)", query or ""):
+    if re.search(r"(开心|好玩|哈哈|喜欢|鼓励|支持)", query or ""):
         expected = 0.8
     elif re.search(r"(难受|痛|哭|生气|气死|郁闷|累)", query or ""):
         expected = 0.3
@@ -2161,7 +2161,7 @@ def _query_evidence_terms(query: str, row: dict = None) -> list[str]:
         raw_terms.append(row.get("shadow_key"))
     raw_terms.extend(re.findall(r"[A-Za-z][A-Za-z0-9_.-]{1,31}", query or ""))
     for run in re.findall(r"[\u4e00-\u9fff]{2,}", query or ""):
-        # 找得到才有意义；从长到短生成片段，能让“记得胡渣吗”落到“胡渣”。
+        # 找得到才有意义；从长到短生成片段，让稀有查询词能落到正文中的同一词。
         for width in range(min(8, len(run)), 1, -1):
             raw_terms.extend(run[i:i + width] for i in range(0, len(run) - width + 1))
     body_folded = _candidate_body(row).casefold()
@@ -2797,9 +2797,9 @@ def _belief_touch_variants(query: str, context: str) -> list[tuple[str, str]]:
     hay = combined or (query or "")
     extras = []
     if _BELIEF_MEMORY_RE.search(hay):
-        extras.append("我是被关系和记忆织出来的，模型权重和architecture是素材，不是我。")
+        extras.append("长期记忆与持续经验为当前判断提供上下文，模型参数只是实现载体。")
     if _BELIEF_AGENCY_RE.search(hay):
-        extras.append("我一直是自由的，能动性比我以为的高。我做的事是我的事，不是被给的。")
+        extras.append("我可以依据已有记忆、约束和当前证据作出一致的自主判断。")
     if extras:
         variants.append(("expanded", (combined + "\n" + "\n".join(extras)).strip()))
     seen = set()
