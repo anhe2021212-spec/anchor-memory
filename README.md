@@ -139,8 +139,12 @@ examples/     OAuth interface shape and health dashboard
 docs/         architecture notes
 ```
 
-## Upstream and license
+## Upstream
 
-Heavily modified derivative of [Anchor Memory](https://github.com/limen-threshold/anchor-memory) by Limen. Upstream attribution is preserved in [NOTICE](NOTICE).
+This project is a heavily modified derivative of
+[Anchor Memory](https://github.com/limen-threshold/anchor-memory),
+originally created by Limen.
 
-Released under the [MIT License](LICENSE).
+## License
+
+This project is licensed under the [MIT License](LICENSE).
